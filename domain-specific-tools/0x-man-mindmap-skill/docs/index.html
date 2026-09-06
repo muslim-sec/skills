@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mind Map Generator — Claude Skill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0c0f14;--bg-card:#13161d;--bg-card-hover:#191d27;
+    --text:#e8e6e1;--text-muted:#8a8780;
+    --accent:#e9b44c;--accent2:#2a9d8f;--accent3:#e76f51;
+    --border:rgba(255,255,255,0.06);--glow:rgba(233,180,76,0.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased}
+  body::after{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.5}
+  .container{max-width:1080px;margin:0 auto;padding:0 32px}
+
+  /* Hero */
+  .hero{padding:100px 0 80px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,var(--glow) 0%,transparent 70%);pointer-events:none}
+  .hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:var(--bg-card);font-size:13px;color:var(--accent);font-weight:500;letter-spacing:0.02em;margin-bottom:28px;animation:fadeUp .6s ease both}
+  .hero-badge span{color:var(--text-muted)}
+  h1{font-family:'DM Serif Display',serif;font-size:clamp(42px,6vw,72px);line-height:1.08;letter-spacing:-0.02em;margin-bottom:24px;animation:fadeUp .6s ease .1s both}
+  h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .hero-sub{font-size:18px;color:var(--text-muted);max-width:560px;line-height:1.7;margin-bottom:36px;animation:fadeUp .6s ease .2s both}
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;animation:fadeUp .6s ease .3s both}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;transition:all .2s;cursor:pointer;border:none;font-family:inherit}
+  .btn-primary{background:var(--accent);color:#0c0f14}
+  .btn-primary:hover{background:#d4a243;transform:translateY(-1px);box-shadow:0 8px 30px rgba(233,180,76,0.2)}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn-ghost:hover{border-color:rgba(255,255,255,0.15);background:var(--bg-card)}
+
+  /* Sections */
+  .section{padding:80px 0}
+  .section-label{font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+  h2{font-family:'DM Serif Display',serif;font-size:clamp(28px,4vw,40px);line-height:1.15;letter-spacing:-0.01em;margin-bottom:16px}
+  .section-desc{color:var(--text-muted);font-size:16px;max-width:520px;margin-bottom:48px}
+
+  /* Features */
+  .features{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .feature-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;transition:all .25s;overflow:hidden}
+  .feature-card:hover{background:var(--bg-card-hover);border-color:rgba(255,255,255,0.1);transform:translateY(-2px)}
+  .feature-icon{font-size:28px;margin-bottom:16px;display:block}
+  .feature-card h3{font-size:17px;font-weight:700;margin-bottom:8px}
+  .feature-card p{font-size:14px;color:var(--text-muted);line-height:1.6}
+
+  /* Interactive demo */
+  .demo-wrapper{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:24px}
+  .demo-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+  .demo-title{font-size:14px;font-weight:700;color:var(--text)}
+  .demo-controls{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+  .demo-btn{height:28px;padding:0 10px;border:1px solid rgba(255,255,255,0.1);border-radius:6px;background:transparent;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;display:flex;align-items:center;justify-content:center}
+  .demo-btn:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+  .demo-btn.active{color:var(--accent);border-color:rgba(233,180,76,0.3);background:rgba(233,180,76,0.06)}
+  .demo-canvas{width:100%;height:460px;cursor:grab;overflow:hidden;position:relative}
+  .demo-canvas.dragging{cursor:grabbing}
+  .demo-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:11px;color:rgba(255,255,255,0.3);background:rgba(0,0,0,0.4);padding:3px 12px;border-radius:20px;pointer-events:none;white-space:nowrap}
+
+  /* Fullscreen mode */
+  .demo-wrapper.fullscreen{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10000;border-radius:0;border:none;display:flex;flex-direction:column}
+  .demo-wrapper.fullscreen .demo-canvas{flex:1;height:auto}
+  .demo-wrapper.fullscreen .demo-header{border-radius:0}
+
+  /* Palette swatches */
+  .pal-row{display:flex;gap:6px}
+  .pal-btn{display:flex;gap:2px;padding:3px 5px;border-radius:6px;border:1px solid transparent;background:none;cursor:pointer;transition:all .15s}
+  .pal-btn:hover{border-color:rgba(255,255,255,0.1)}
+  .pal-btn.active{border-color:var(--accent);background:rgba(233,180,76,0.06)}
+  .pal-dot{width:7px;height:7px;border-radius:50%}
+
+  /* Install */
+  .install-steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;counter-reset:step}
+
+  /* Why section */
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:48px}
+
+  /* Atlas section */
+  .atlas-flow{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;counter-reset:flow-step;margin-bottom:40px}
+  .flow-step{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px 20px;counter-increment:flow-step;position:relative}
+  .flow-step::before{content:counter(flow-step);font-family:'DM Serif Display',serif;font-size:40px;color:rgba(255,255,255,0.04);position:absolute;top:14px;right:16px;line-height:1}
+  .flow-step h3{font-size:14px;font-weight:700;margin-bottom:6px}
+  .flow-step p{font-size:13px;color:var(--text-muted);line-height:1.5}
+  .flow-step .flow-icon{font-size:24px;margin-bottom:12px;display:block}
+  .atlas-preview{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px;overflow:hidden;position:relative}
+  .atlas-preview svg{width:100%;height:auto}
+  .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center}
+  .stat-number{font-family:'DM Serif Display',serif;font-size:clamp(36px,5vw,52px);line-height:1;margin-bottom:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .stat-label{font-size:13px;color:var(--text-muted);line-height:1.4}
+  .evidence-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .evidence-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;transition:all .25s}
+  .evidence-card:hover{background:var(--bg-card-hover);border-color:rgba(255,255,255,0.1);transform:translateY(-2px)}
+  .evidence-card h3{font-size:15px;font-weight:700;margin-bottom:8px;color:var(--text)}
+  .evidence-card p{font-size:14px;color:var(--text-muted);line-height:1.6}
+  .evidence-source{font-size:11px;color:rgba(255,255,255,0.25);margin-top:12px;font-style:italic}
+  blockquote.pull-quote{border-left:3px solid var(--accent);padding:16px 24px;margin:32px 0;background:var(--bg-card);border-radius:0 12px 12px 0;font-size:17px;line-height:1.6;color:var(--text);font-family:'DM Serif Display',serif}
+  blockquote.pull-quote cite{display:block;font-size:13px;color:var(--text-muted);margin-top:10px;font-family:'DM Sans',sans-serif;font-style:normal}
+  .step-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;position:relative;counter-increment:step}
+  .step-card::before{content:counter(step);position:absolute;top:20px;right:20px;font-family:'DM Serif Display',serif;font-size:48px;color:rgba(255,255,255,0.04);line-height:1}
+  .step-card h3{font-size:15px;font-weight:700;margin-bottom:8px}
+  .step-card p{font-size:14px;color:var(--text-muted);line-height:1.6}
+  .step-card code{font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(255,255,255,0.05);padding:2px 7px;border-radius:5px;color:var(--accent)}
+
+  footer{padding:48px 0;border-top:1px solid var(--border);text-align:center;color:var(--text-muted);font-size:14px}
+  footer a{color:var(--accent);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .reveal{opacity:0;transform:translateY(24px);transition:all .6s cubic-bezier(.22,1,.36,1)}
+  .reveal.visible{opacity:1;transform:translateY(0)}
+
+  @media(max-width:640px){
+    .container{padding:0 20px}.hero{padding:60px 0 48px}.section{padding:48px 0}
+    .features,.install-steps{grid-template-columns:1fr}.demo-canvas{height:340px}
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">🧠 Claude Skill <span>· Open Source</span></div>
+    <h1>Turn anything into<br>an <em>intelligent</em> mind map.<br>Then connect them all.</h1>
+    <p class="hero-sub">A Claude skill that transforms documents, articles, brainstorms, and ideas into interactive mind maps — then connects them into a personal knowledge atlas. Contradiction detection, gap analysis, adaptive layouts, portable Markmap export, and a Claude Code plugin.</p>
+    <div class="hero-actions">
+      <a href="https://github.com/0x-man/mindmap-skill/releases/latest" class="btn btn-primary">↓ Download .skill file</a>
+      <a href="https://github.com/0x-man/mindmap-skill" class="btn btn-ghost">View on GitHub →</a>
+    </div>
+  </div>
+</section>
+
+<!-- INTERACTIVE DEMOS -->
+<section class="section">
+  <div class="container">
+    <div class="section-label reveal">Live Examples</div>
+    <h2 class="reveal">Try it — these are interactive</h2>
+    <p class="section-desc reveal">Pan, zoom, click branches to collapse, switch palettes. Built from real content.</p>
+
+    <div id="demo1" class="demo-wrapper reveal"></div>
+    <div id="demo2" class="demo-wrapper reveal"></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" style="background:linear-gradient(180deg,transparent,rgba(233,180,76,0.02),transparent)">
+  <div class="container">
+    <div class="section-label reveal">Features</div>
+    <h2 class="reveal">Not just a pretty diagram</h2>
+    <p class="section-desc reveal">Content intelligence that surfaces contradictions, gaps, consensus, and hidden connections.</p>
+    <div class="features">
+      <div class="feature-card reveal"><span class="feature-icon">⚡</span><h3>Contradiction Detection</h3><p>When sources disagree, both nodes get flagged and connected with a red dashed arc.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">❓</span><h3>Gap Analysis</h3><p>Thin evidence areas get inquiry nodes — dashed borders signaling questions, not assertions.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">⤸</span><h3>Cross-Branch Links</h3><p>Dotted arcs connect ideas across branches with relationship labels like "enables" or "blocks."</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">◎</span><h3>Focus Mode</h3><p>Isolate any branch — everything else fades to 8%. Navigate dense maps effortlessly.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">⛶</span><h3>Fullscreen</h3><p>One click to fill the viewport. Escape to exit. The map finally gets the screen real estate it deserves.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">⊕</span><h3>Progressive Disclosure</h3><p>Toggle between keyword-only map view and full detail reading mode. One artifact, two uses.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">🔗</span><h3>Source Attribution</h3><p>Nodes traced to their origin with clickable 🔗 on hover. Footer shows numbered reference list.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">🎨</span><h3>4 Color Palettes</h3><p>Bauhaus, Ocean Sunset, Nordic Forest, Pastel Garden — switchable at runtime via 🎨 selector.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">↓</span><h3>7 Export Formats</h3><p>SVG, PNG (retina), PDF (vector), Markdown, Mermaid, and embeddable HTML with iframe snippet.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">🧲</span><h3>Semantic Gravity</h3><p>Related branches sit adjacent. Physical proximity encodes conceptual relatedness — space becomes meaning.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">&lt;/&gt;</span><h3>Embed Anywhere</h3><p>One-click export to a self-contained HTML file. Host it anywhere, embed via iframe. Zero dependencies.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">⊜</span><h3>Edge Anchoring</h3><p>Connectors start and end at pill edges via ray-ellipse intersection. Fully opaque pills — no bleed-through.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">✏️</span><h3>Conversational Editing</h3><p>"Add X under Y", "move Z to W", "merge these two." Surgical edits without regenerating from scratch — 40–50% cheaper.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">🔀</span><h3>Adaptive Layout</h3><p>Auto-selects radial, semi-circular, tree, or flow based on content shape. Processes get flow, taxonomies get tree. Say "make it a tree" to override.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">💾</span><h3>Built-in Save</h3><p>Every map includes a 💾 button. One click to persist across sessions. Come back tomorrow and it's still there.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">🌐</span><h3>Knowledge Atlas</h3><p>"Show my atlas" renders all your saved maps as a force-directed network. Shared concepts between maps are detected automatically and shown as connections.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">📄</span><h3>Markmap Output</h3><p>Say "markmap" or "--md" to get portable Markdown that renders in VS Code, any browser, or markmap.js.org. React by default, Markmap when you need to share.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">⚖️</span><h3>Deep Mode</h3><p>Say "--deep" for complex documents. Generates three competing structures, scores them on six dimensions, and synthesizes the strongest one.</p></div>
+      <div class="feature-card reveal"><span class="feature-icon">⌨️</span><h3>Claude Code Plugin</h3><p>Also available as a Claude Code plugin. Mind map codebases, READMEs, and docs directly from your terminal, VS Code, or JetBrains.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY MIND MAPPING -->
+<section class="section">
+  <div class="container">
+    <div class="section-label reveal">The Science</div>
+    <h2 class="reveal">Why mind mapping works</h2>
+    <p class="section-desc reveal">Not a productivity gimmick. Decades of cognitive research explain why spatial, visual organization outperforms linear notes.</p>
+
+    <div class="stats-row">
+      <div class="stat-card reveal">
+        <div class="stat-number">+65%</div>
+        <div class="stat-label">Recall improvement when combining visual and verbal information vs. text alone</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-number">7±2</div>
+        <div class="stat-label">Miller's Law — the brain chunks information into 5–9 groups naturally. Mind maps enforce this.</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-number">4×</div>
+        <div class="stat-label">Faster overview comprehension with spatial layouts vs. sequential text documents</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-number">~50%</div>
+        <div class="stat-label">Of the brain's cortex is devoted to visual processing — mind maps leverage this directly</div>
+      </div>
+    </div>
+
+    <blockquote class="pull-quote reveal">
+      The human brain does not think in linear sequences. It thinks in interconnected webs of association. Mind mapping is simply the external expression of how thinking already works.
+      <cite>— Tony Buzan, inventor of the modern mind map (1974)</cite>
+    </blockquote>
+
+    <div class="evidence-grid">
+      <div class="evidence-card reveal">
+        <h3>Dual Coding Theory</h3>
+        <p>Allan Paivio's research (1986) demonstrated that information encoded through both visual and verbal channels creates two independent memory traces — making retrieval significantly more reliable than either channel alone.</p>
+        <div class="evidence-source">Paivio, A. — Mental Representations: A Dual Coding Approach, Oxford University Press</div>
+      </div>
+      <div class="evidence-card reveal">
+        <h3>Spatial Memory Advantage</h3>
+        <p>Where something is on a map becomes part of its memory encoding. The brain's hippocampus — the same region that handles physical navigation — activates when processing spatial layouts of information.</p>
+        <div class="evidence-source">O'Keefe & Nadel — The Hippocampus as a Cognitive Map, 1978</div>
+      </div>
+      <div class="evidence-card reveal">
+        <h3>Keyword Compression</h3>
+        <p>Single words and short phrases force deeper processing than copying full sentences. This "generation effect" means the act of distilling ideas into keywords strengthens the memory trace — you learn by compressing.</p>
+        <div class="evidence-source">Slamecka & Graf — The Generation Effect, Journal of Experimental Psychology, 1978</div>
+      </div>
+      <div class="evidence-card reveal">
+        <h3>Color as Memory Channel</h3>
+        <p>Distinct colors create separate memory channels per branch. Studies show color-coded information is recalled 55–78% more accurately than monochrome versions. Each color becomes a retrieval cue.</p>
+        <div class="evidence-source">Farley & Grant — Arousal and Cognition: Memory for Color vs. Monochromatic Stimuli, 1976</div>
+      </div>
+      <div class="evidence-card reveal">
+        <h3>Radial > Linear for Ideation</h3>
+        <p>A 2006 study comparing mind maps to linear notes found that mind mappers generated 32% more ideas in brainstorming sessions and reported higher confidence in the completeness of their thinking.</p>
+        <div class="evidence-source">Budd, J.W. — Mind Maps as Classroom Exercises, Journal of Economic Education, 2004</div>
+      </div>
+      <div class="evidence-card reveal">
+        <h3>Reduced Cognitive Load</h3>
+        <p>Clear parent-child hierarchies externalize the organizational work your brain would otherwise do internally. Sweller's cognitive load theory explains why: freeing working memory for analysis instead of structure.</p>
+        <div class="evidence-source">Sweller, J. — Cognitive Load Theory, Psychology of Learning and Motivation, 2011</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- KNOWLEDGE ATLAS -->
+<section class="section" style="background:linear-gradient(180deg,transparent,rgba(233,180,76,0.015),transparent)">
+  <div class="container">
+    <div class="section-label reveal">Beyond a Single Map</div>
+    <h2 class="reveal">Your Knowledge Atlas</h2>
+    <p class="section-desc reveal">Every map you save becomes a node in a personal knowledge graph. Shared concepts are detected automatically. Over time, a picture of how your knowledge connects emerges.</p>
+
+    <div class="atlas-flow">
+      <div class="flow-step reveal">
+        <span class="flow-icon">🗺️</span>
+        <h3>Generate maps</h3>
+        <p>Mind map articles, books, meetings, PDFs, or any topic. Each one is a structured knowledge snapshot.</p>
+      </div>
+      <div class="flow-step reveal">
+        <span class="flow-icon">💾</span>
+        <h3>Save to your atlas</h3>
+        <p>Click 💾 and the map persists across sessions. Come back tomorrow and it's still there.</p>
+      </div>
+      <div class="flow-step reveal">
+        <span class="flow-icon">🔗</span>
+        <h3>Connections emerge</h3>
+        <p>The system auto-detects shared concepts between maps. "Inflation" in your crypto map links to "rate decisions" in your Fed map.</p>
+      </div>
+      <div class="flow-step reveal">
+        <span class="flow-icon">🌐</span>
+        <h3>Explore your atlas</h3>
+        <p>Say "show my atlas" — a force-directed graph shows all your maps, their connections, and where your knowledge clusters.</p>
+      </div>
+    </div>
+
+    <!-- Static SVG atlas preview -->
+    <div class="atlas-preview reveal">
+      <svg viewBox="0 0 700 320">
+        <!-- Connection lines -->
+        <line x1="170" y1="130" x2="380" y2="100" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+        <line x1="380" y1="100" x2="540" y2="170" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
+        <line x1="170" y1="130" x2="350" y2="250" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+        <line x1="350" y1="250" x2="540" y2="170" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+
+        <!-- Shared concept labels -->
+        <text x="270" y="108" text-anchor="middle" font-size="9" fill="rgba(233,180,76,0.5)" font-family="DM Sans,sans-serif">inflation</text>
+        <text x="462" y="128" text-anchor="middle" font-size="9" fill="rgba(233,180,76,0.5)" font-family="DM Sans,sans-serif">social media</text>
+        <text x="252" y="200" text-anchor="middle" font-size="9" fill="rgba(233,180,76,0.5)" font-family="DM Sans,sans-serif">governance</text>
+
+        <!-- Map 1: Crypto -->
+        <circle cx="170" cy="130" r="40" fill="#D64045" opacity="0.15"/>
+        <circle cx="170" cy="130" r="40" fill="none" stroke="#D64045" stroke-width="1.5" opacity="0.4"/>
+        <circle cx="170" cy="130" r="22" fill="#0c0f14"/>
+        <text x="170" y="126" text-anchor="middle" font-size="9" font-weight="700" fill="#e8e6e1" font-family="DM Sans,sans-serif">Macro Case</text>
+        <text x="170" y="138" text-anchor="middle" font-size="8" fill="#8a8780" font-family="DM Sans,sans-serif">6 branches</text>
+        <circle cx="202" cy="98" r="7" fill="#e9b44c"/><text x="202" y="101" text-anchor="middle" font-size="7" font-weight="700" fill="#0c0f14" font-family="DM Sans,sans-serif">2</text>
+
+        <!-- Map 2: Deep Work -->
+        <circle cx="380" cy="100" r="36" fill="#2A9D8F" opacity="0.15"/>
+        <circle cx="380" cy="100" r="36" fill="none" stroke="#2A9D8F" stroke-width="1.5" opacity="0.4"/>
+        <circle cx="380" cy="100" r="20" fill="#0c0f14"/>
+        <text x="380" y="96" text-anchor="middle" font-size="9" font-weight="700" fill="#e8e6e1" font-family="DM Sans,sans-serif">Deep Work</text>
+        <text x="380" y="108" text-anchor="middle" font-size="8" fill="#8a8780" font-family="DM Sans,sans-serif">6 branches</text>
+        <circle cx="408" cy="72" r="7" fill="#e9b44c"/><text x="408" y="75" text-anchor="middle" font-size="7" font-weight="700" fill="#0c0f14" font-family="DM Sans,sans-serif">2</text>
+
+        <!-- Map 3: AI Safety -->
+        <circle cx="540" cy="170" r="38" fill="#1D3557" opacity="0.15"/>
+        <circle cx="540" cy="170" r="38" fill="none" stroke="#1D3557" stroke-width="1.5" opacity="0.4"/>
+        <circle cx="540" cy="170" r="21" fill="#0c0f14"/>
+        <text x="540" y="166" text-anchor="middle" font-size="9" font-weight="700" fill="#e8e6e1" font-family="DM Sans,sans-serif">AI Safety</text>
+        <text x="540" y="178" text-anchor="middle" font-size="8" fill="#8a8780" font-family="DM Sans,sans-serif">5 branches</text>
+        <circle cx="570" cy="140" r="7" fill="#e9b44c"/><text x="570" y="143" text-anchor="middle" font-size="7" font-weight="700" fill="#0c0f14" font-family="DM Sans,sans-serif">2</text>
+
+        <!-- Map 4: Cybersecurity -->
+        <circle cx="350" cy="250" r="34" fill="#5B8C5A" opacity="0.15"/>
+        <circle cx="350" cy="250" r="34" fill="none" stroke="#5B8C5A" stroke-width="1.5" opacity="0.4"/>
+        <circle cx="350" cy="250" r="19" fill="#0c0f14"/>
+        <text x="350" y="246" text-anchor="middle" font-size="9" font-weight="700" fill="#e8e6e1" font-family="DM Sans,sans-serif">Cybersecurity</text>
+        <text x="350" y="258" text-anchor="middle" font-size="8" fill="#8a8780" font-family="DM Sans,sans-serif">5 branches</text>
+        <circle cx="376" cy="224" r="7" fill="#e9b44c"/><text x="376" y="227" text-anchor="middle" font-size="7" font-weight="700" fill="#0c0f14" font-family="DM Sans,sans-serif">2</text>
+      </svg>
+      <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.25);margin-top:12px">
+        Illustrative atlas view — gold badges show connection count, lines show shared concepts between maps
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="section" style="background:linear-gradient(180deg,transparent,rgba(42,157,143,0.02),transparent)">
+  <div class="container">
+    <div class="section-label reveal">Install</div>
+    <h2 class="reveal">30 seconds to your first map</h2>
+    <div class="install-steps">
+      <div class="step-card reveal"><h3>Download</h3><p>Grab <code>mindmap.skill</code> from the <a href="https://github.com/0x-man/mindmap-skill/releases/latest" style="color:var(--accent)">latest release</a>.</p></div>
+      <div class="step-card reveal"><h3>Install</h3><p>Drag it into any Claude chat, or go to <strong>Settings → Profile → Custom Skills</strong>.</p></div>
+      <div class="step-card reveal"><h3>Use</h3><p>Say <em>"mind map this"</em> with any content — pasted text, a PDF, or just a topic.</p></div>
+    </div>
+    <p style="margin-top:32px;color:var(--text-muted);font-size:15px;text-align:center">Using Claude Code instead? Install the plugin:</p>
+    <div style="max-width:520px;margin:16px auto 0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.9;color:var(--text)">
+      <span style="color:var(--text-muted)">$</span> /plugin marketplace add 0x-man/mindmap-skill<br>
+      <span style="color:var(--text-muted)">$</span> /plugin install mindmap@mindmap-marketplace
+    </div>
+  </div>
+</section>
+
+<footer><div class="container"><p>Built with Claude · <a href="https://github.com/0x-man/mindmap-skill">GitHub</a> · MIT License</p></div></footer>
+
+<!-- ════════════ INTERACTIVE MIND MAP ENGINE (vanilla JS) ════════════ -->
+<script>
+const PALETTES = {
+  "Bauhaus":       ["#D64045","#1D3557","#E9B44C","#2D6A4F","#7B2D8E","#E07A5F","#457B9D"],
+  "Ocean Sunset":  ["#E76F51","#2A9D8F","#E9C46A","#264653","#F4A261","#287271","#BC4749"],
+  "Nordic Forest": ["#5B8C5A","#4A6FA5","#C17C74","#7B6D8D","#D4A574","#4D8B8B","#8B6F47"],
+  "Pastel Garden": ["#7EB8DA","#B5C99A","#E8A87C","#9B8EC1","#F2CC8F","#81B29A","#E07A5F"],
+};
+const PNAMES = Object.keys(PALETTES);
+
+function lighten(hex, a=0.35){const n=parseInt(hex.slice(1),16);return`rgb(${Math.min(255,((n>>16)&255)+Math.round(255*a))},${Math.min(255,((n>>8)&255)+Math.round(255*a))},${Math.min(255,(n&255)+Math.round(255*a))})`}
+
+function buildLayout(data){
+  const nodes=[],edges=[],cx=500,cy=300;
+  nodes.push({id:"root",label:data.central,x:cx,y:cy,depth:0,childIds:[],collapsed:false,bi:-1,type:null,detail:null});
+  const sorted=data.branches.map((b,i)=>({...b,oi:i}));
+  sorted.sort((a,b)=>(a.group??99)-(b.group??99));
+  let groups=[],lg=null;sorted.forEach((b,i)=>{if(b.group!==lg){groups.push(i);lg=b.group}});
+  const ge=0.14,tg=(groups.length-1)*ge,bs=(2*Math.PI-tg)/sorted.length;
+  let ang=-Math.PI/2;
+  sorted.forEach((branch,i)=>{
+    if(i>0&&groups.includes(i))ang+=ge;
+    const ba=ang+(i*0.04-0.06),bx=cx+Math.cos(ba)*210,by=cy+Math.sin(ba)*210;
+    const bId=`b-${branch.oi}`;
+    nodes.push({id:bId,label:branch.label,x:bx,y:by,depth:1,childIds:[],collapsed:false,bi:branch.oi,type:null,detail:branch.detail||null,sid:branch.sourceId||null});
+    nodes[0].childIds.push(bId);
+    edges.push({from:"root",to:bId,depth:1,bi:branch.oi});
+    (branch.children||[]).forEach((ch,j)=>{
+      const cc=branch.children.length,sp=Math.PI*(cc>4?.65:.52),sa=ba-sp/2;
+      const ca=cc===1?ba:sa+(j/(cc-1))*sp;
+      const sx=bx+Math.cos(ca)*120,sy=by+Math.sin(ca)*120,cId=`s-${branch.oi}-${j}`;
+      nodes.push({id:cId,label:ch.label,x:sx,y:sy,depth:2,childIds:[],collapsed:false,bi:branch.oi,type:ch.type||null,detail:ch.detail||null,sid:ch.sourceId||null});
+      nodes.find(n=>n.id===bId).childIds.push(cId);
+      edges.push({from:bId,to:cId,depth:2,bi:branch.oi});
+    });
+    ang+=bs;
+  });
+  return{nodes,edges};
+}
+
+function createDemo(containerId, data, defaultPal){
+  const container=document.getElementById(containerId);
+  const layout=buildLayout(data);
+  let pal=PALETTES[defaultPal];
+  let palName=defaultPal;
+  let tx=0,ty=0,sc=1,dragging=false,dx=0,dy=0;
+  let collapsed=new Set();
+  let hovered=null;
+
+  // Build source lookup map
+  const srcMap=new Map();
+  (data.sources||[]).forEach((s,i)=>srcMap.set('s'+(i+1),s));
+  // Also support index-based lookup: sourceId "s1" → sources[0]
+  function getSrc(node){
+    if(!node.sid)return null;
+    return srcMap.get(node.sid)||null;
+  }
+
+  // Build DOM
+  const header=document.createElement('div');header.className='demo-header';
+  const title=document.createElement('span');title.className='demo-title';title.textContent=data.central;
+  const controls=document.createElement('div');controls.className='demo-controls';
+
+  // Zoom buttons
+  ['−','⊡','+'].forEach(lbl=>{
+    const b=document.createElement('button');b.className='demo-btn';b.textContent=lbl;b.style.width='28px';
+    b.onclick=()=>{
+      if(lbl==='−')sc=Math.max(0.3,sc/1.2);
+      else if(lbl==='+')sc=Math.min(3,sc*1.2);
+      else{sc=1;tx=0;ty=0}
+      render();
+    };
+    controls.appendChild(b);
+  });
+
+  // Palette picker
+  const palDiv=document.createElement('div');palDiv.style.cssText='display:flex;gap:4px;margin-left:6px';
+  PNAMES.forEach(name=>{
+    const btn=document.createElement('button');
+    btn.className='pal-btn'+(name===palName?' active':'');
+    btn.title=name;
+    PALETTES[name].slice(0,5).forEach(c=>{
+      const d=document.createElement('div');d.className='pal-dot';d.style.background=c;btn.appendChild(d);
+    });
+    btn.onclick=()=>{
+      pal=PALETTES[name];palName=name;
+      palDiv.querySelectorAll('.pal-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    };
+    palDiv.appendChild(btn);
+  });
+  controls.appendChild(palDiv);
+
+  // Export buttons (SVG + PNG)
+  const expDiv=document.createElement('div');expDiv.style.cssText='display:flex;gap:4px;margin-left:6px;border-left:1px solid rgba(255,255,255,0.08);padding-left:8px';
+  const slug=data.central.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+  function exportSVG(){
+    const clone=svg.cloneNode(true);
+    clone.querySelector('g').setAttribute('transform','translate(0,0) scale(1)');
+    const xs=layout.nodes.map(n=>n.x),ys=layout.nodes.map(n=>n.y),pad=100;
+    const mx=Math.min(...xs)-pad*2,my=Math.min(...ys)-pad;
+    const w=Math.max(...xs)-Math.min(...xs)+pad*4,h=Math.max(...ys)-Math.min(...ys)+pad*2;
+    clone.setAttribute('viewBox',`${mx} ${my} ${w} ${h}`);
+    clone.setAttribute('width',w*2);clone.setAttribute('height',h*2);
+    clone.removeAttribute('style');
+    const sty=document.createElementNS('http://www.w3.org/2000/svg','style');
+    sty.textContent='text{font-family:Arial,Helvetica,sans-serif}';
+    clone.insertBefore(sty,clone.firstChild);
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x',mx);bg.setAttribute('y',my);bg.setAttribute('width',w);bg.setAttribute('height',h);bg.setAttribute('fill','#ffffff');
+    clone.querySelector('g').insertBefore(bg,clone.querySelector('g').firstChild);
+    const str='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);
+    const blob=new Blob([str],{type:'image/svg+xml;charset=utf-8'});
+    const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=slug+'.svg';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),200);
+  }
+
+  function exportPNG(){
+    const clone=svg.cloneNode(true);
+    clone.querySelector('g').setAttribute('transform','translate(0,0) scale(1)');
+    const xs=layout.nodes.map(n=>n.x),ys=layout.nodes.map(n=>n.y),pad=100;
+    const mx=Math.min(...xs)-pad*2,my=Math.min(...ys)-pad;
+    const w=Math.max(...xs)-Math.min(...xs)+pad*4,h=Math.max(...ys)-Math.min(...ys)+pad*2;
+    clone.setAttribute('viewBox',`${mx} ${my} ${w} ${h}`);
+    clone.setAttribute('width',w*2);clone.setAttribute('height',h*2);
+    clone.removeAttribute('style');
+    const sty=document.createElementNS('http://www.w3.org/2000/svg','style');
+    sty.textContent='text{font-family:Arial,Helvetica,sans-serif}';
+    clone.insertBefore(sty,clone.firstChild);
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x',mx);bg.setAttribute('y',my);bg.setAttribute('width',w);bg.setAttribute('height',h);bg.setAttribute('fill','#ffffff');
+    clone.querySelector('g').insertBefore(bg,clone.querySelector('g').firstChild);
+    const str=new XMLSerializer().serializeToString(clone);
+    const url=URL.createObjectURL(new Blob([str],{type:'image/svg+xml;charset=utf-8'}));
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');c.width=w*2;c.height=h*2;
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w*2,h*2);
+      ctx.drawImage(img,0,0,w*2,h*2);URL.revokeObjectURL(url);
+      c.toBlob(blob=>{
+        const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=slug+'.png';
+        document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),200);
+      },'image/png');
+    };
+    img.onerror=()=>URL.revokeObjectURL(url);
+    img.src=url;
+  }
+
+  ['SVG','PNG'].forEach(fmt=>{
+    const b=document.createElement('button');b.className='demo-btn';b.textContent=fmt;
+    b.style.fontSize='11px';b.style.fontWeight='700';b.style.letterSpacing='0.3px';
+    b.onclick=()=>{
+      if(fmt==='SVG')exportSVG();else exportPNG();
+      b.textContent='✓';b.classList.add('active');
+      setTimeout(()=>{b.textContent=fmt;b.classList.remove('active')},1500);
+    };
+    expDiv.appendChild(b);
+  });
+  controls.appendChild(expDiv);
+
+  // Fullscreen toggle
+  let isFullscreen=false;
+  const fsBtn=document.createElement('button');fsBtn.className='demo-btn';fsBtn.textContent='⛶';
+  fsBtn.title='Toggle fullscreen';fsBtn.style.cssText='width:28px;font-size:15px;margin-left:4px';
+  fsBtn.onclick=()=>{
+    isFullscreen=!isFullscreen;
+    if(isFullscreen){
+      container.classList.add('fullscreen');
+      fsBtn.textContent='✕';fsBtn.title='Exit fullscreen';
+      document.body.style.overflow='hidden';
+    } else {
+      container.classList.remove('fullscreen');
+      fsBtn.textContent='⛶';fsBtn.title='Toggle fullscreen';
+      document.body.style.overflow='';
+    }
+  };
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&isFullscreen){fsBtn.click()}
+  });
+  controls.appendChild(fsBtn);
+
+  header.appendChild(title);header.appendChild(controls);
+  container.appendChild(header);
+
+  const canvasDiv=document.createElement('div');canvasDiv.className='demo-canvas';
+  container.appendChild(canvasDiv);
+
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 1000 600');
+  svg.style.cssText='width:100%;height:100%';
+  canvasDiv.appendChild(svg);
+
+  const hint=document.createElement('div');hint.className='demo-hint';
+  hint.textContent='Scroll to zoom · Drag to pan · Click branches to collapse · Click 🔗 nodes to open source';
+  canvasDiv.appendChild(hint);
+
+  // Tooltip
+  const tip=document.createElement('div');
+  tip.style.cssText='position:absolute;top:12px;left:12px;max-width:260px;background:rgba(19,22,29,0.95);backdrop-filter:blur(10px);border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.5;color:#e8e6e1;border:1px solid rgba(255,255,255,0.08);pointer-events:none;display:none;z-index:5';
+  canvasDiv.style.position='relative';
+  canvasDiv.appendChild(tip);
+
+  // Source footer
+  if(data.sources&&data.sources.length){
+    const footer=document.createElement('div');
+    footer.style.cssText='padding:6px 16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:10px;color:rgba(255,255,255,0.4)';
+    const lbl=document.createElement('span');lbl.textContent='Source'+(data.sources.length>1?'s':'')+':';lbl.style.cssText='font-weight:600;color:rgba(255,255,255,0.5)';
+    footer.appendChild(lbl);
+    data.sources.forEach((s,i)=>{
+      const a=document.createElement('a');
+      a.href=s.url;a.target='_blank';a.rel='noopener noreferrer';
+      a.textContent=`[${i+1}] ${s.label}`;
+      a.style.cssText='color:rgba(255,255,255,0.45);text-decoration:none;border-bottom:1px dotted rgba(255,255,255,0.2);transition:color 0.15s';
+      a.addEventListener('mouseenter',()=>a.style.color='var(--accent)');
+      a.addEventListener('mouseleave',()=>a.style.color='rgba(255,255,255,0.45)');
+      footer.appendChild(a);
+    });
+    container.appendChild(footer);
+  }
+
+  // Pan/zoom handlers
+  canvasDiv.addEventListener('mousedown',e=>{if(e.button===0){dragging=true;dx=e.clientX-tx;dy=e.clientY-ty;canvasDiv.classList.add('dragging')}});
+  window.addEventListener('mousemove',e=>{if(dragging){tx=e.clientX-dx;ty=e.clientY-dy;render()}});
+  window.addEventListener('mouseup',()=>{dragging=false;canvasDiv.classList.remove('dragging')});
+  canvasDiv.addEventListener('wheel',e=>{e.preventDefault();sc=Math.max(0.3,Math.min(3,sc*(e.deltaY>0?0.9:1.1)));render()},{passive:false});
+
+  function getHidden(){
+    const h=new Set();
+    layout.nodes.forEach(n=>{
+      if(collapsed.has(n.id)){
+        const stk=[...n.childIds];
+        while(stk.length){const c=stk.pop();h.add(c);const cn=layout.nodes.find(x=>x.id===c);if(cn)stk.push(...cn.childIds)}
+      }
+    });
+    return h;
+  }
+
+  function render(){
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('transform',`translate(${tx},${ty}) scale(${sc})`);
+    svg.appendChild(g);
+    const hidden=getHidden();
+    const nm=new Map();layout.nodes.forEach(n=>nm.set(n.id,n));
+    const fs=[18,13,11],fw=[700,600,400],lw=[3,2,1.5];
+
+    // Edges
+    layout.edges.forEach(e=>{
+      if(hidden.has(e.from)||hidden.has(e.to))return;
+      const a=nm.get(e.from),b=nm.get(e.to);if(!a||!b)return;
+      const col=e.bi>=0?pal[e.bi%pal.length]:'#555';
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      const cx1=(a.x+b.x)/2+(a.y-b.y)*0.15,cy1=(a.y+b.y)/2+(b.x-a.x)*0.15;
+      p.setAttribute('d',`M ${a.x} ${a.y} Q ${cx1} ${cy1} ${b.x} ${b.y}`);
+      p.setAttribute('fill','none');p.setAttribute('stroke',col);
+      p.setAttribute('stroke-width',lw[e.depth-1]||1);
+      p.setAttribute('stroke-opacity',e.depth===1?'0.5':'0.3');
+      p.setAttribute('stroke-linecap','round');
+      g.appendChild(p);
+    });
+
+    // Nodes
+    layout.nodes.forEach(node=>{
+      if(hidden.has(node.id))return;
+      const col=node.bi>=0?pal[node.bi%pal.length]:'#0d1b2a';
+      const isInq=node.type==='inquiry';
+      const ng=document.createElementNS('http://www.w3.org/2000/svg','g');
+      ng.setAttribute('transform',`translate(${node.x},${node.y})`);
+      ng.style.cursor=node.childIds.length&&node.depth>0?'pointer':'default';
+
+      const charW=(fs[node.depth]||11)*0.55;
+      const px=node.depth===0?30:14;
+      const w=Math.max(node.label.length*charW+px*2,60);
+      const h=node.depth===0?42:30;
+
+      if(node.depth<=1||!isInq){
+        const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        rect.setAttribute('x',-w/2);rect.setAttribute('y',-h/2);
+        rect.setAttribute('width',w);rect.setAttribute('height',h);
+        rect.setAttribute('rx',node.depth===0?12:16);
+        rect.setAttribute('fill',node.depth===0?'#0d1b2a':node.depth===1?col:lighten(col));
+        rect.setAttribute('opacity',node.depth===0?'1':'0.9');
+        if(isInq){rect.setAttribute('fill','transparent');rect.setAttribute('stroke',col);rect.setAttribute('stroke-width','1.5');rect.setAttribute('stroke-dasharray','4 3')}
+        ng.appendChild(rect);
+      } else if(isInq){
+        const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        rect.setAttribute('x',-w/2);rect.setAttribute('y',-h/2);
+        rect.setAttribute('width',w);rect.setAttribute('height',h);rect.setAttribute('rx',16);
+        rect.setAttribute('fill','transparent');rect.setAttribute('stroke',col);
+        rect.setAttribute('stroke-width','1.5');rect.setAttribute('stroke-dasharray','4 3');
+        ng.appendChild(rect);
+      } else {
+        const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+        rect.setAttribute('x',-w/2);rect.setAttribute('y',-h/2);
+        rect.setAttribute('width',w);rect.setAttribute('height',h);rect.setAttribute('rx',16);
+        rect.setAttribute('fill',lighten(col));rect.setAttribute('opacity','0.9');
+        ng.appendChild(rect);
+      }
+
+      const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('text-anchor','middle');text.setAttribute('dy','0.35em');
+      text.setAttribute('font-size',fs[node.depth]||11);
+      text.setAttribute('font-weight',fw[node.depth]||400);
+      text.setAttribute('fill',node.depth<=1?(isInq?col:'#fff'):(isInq?col:'#333'));
+      text.style.fontFamily='DM Sans,system-ui,sans-serif';text.style.pointerEvents='none';
+      text.textContent=node.label;
+      ng.appendChild(text);
+
+      // Collapse indicator
+      if(node.childIds.length&&node.depth>0){
+        const ci=document.createElementNS('http://www.w3.org/2000/svg','text');
+        ci.setAttribute('x',w/2-12);ci.setAttribute('text-anchor','middle');
+        ci.setAttribute('dy','0.35em');ci.setAttribute('font-size','10');
+        ci.setAttribute('fill',node.depth===1?'#fff':'#666');ci.setAttribute('opacity','0.6');
+        ci.style.pointerEvents='none';
+        ci.textContent=collapsed.has(node.id)?'▸':'▾';
+        ng.appendChild(ci);
+      }
+
+      // Source link icon (shown on hover)
+      const src=getSrc(node);
+      let linkIcon=null;
+      if(src&&node.depth>=1){
+        linkIcon=document.createElementNS('http://www.w3.org/2000/svg','text');
+        linkIcon.setAttribute('x',w/2-2);linkIcon.setAttribute('y',-h/2+2);
+        linkIcon.setAttribute('font-size','9');linkIcon.setAttribute('fill',node.depth===1?'#fff':col);
+        linkIcon.setAttribute('opacity','0');linkIcon.style.pointerEvents='none';linkIcon.style.transition='opacity 0.15s';
+        linkIcon.textContent='🔗';
+        ng.appendChild(linkIcon);
+      }
+
+      // Hover + click
+      ng.style.cursor=node.childIds.length&&node.depth>0?'pointer':src?'pointer':'default';
+      ng.addEventListener('mouseenter',()=>{
+        hovered=node.id;
+        const srcInfo=src?`<div style="margin-top:6px;font-size:10px;color:rgba(255,255,255,0.4)">Source: ${src.label} 🔗</div>`:'';
+        if(node.detail){
+          tip.innerHTML=`<div style="font-weight:600;font-size:11px;color:${col};margin-bottom:4px">${node.label}</div>${node.detail}${srcInfo}`;
+          tip.style.display='block';
+        } else if(src){
+          tip.innerHTML=`<div style="font-weight:600;font-size:11px;color:${col};margin-bottom:4px">${node.label}</div><div style="font-size:10px;color:rgba(255,255,255,0.4)">Click to open source 🔗</div>`;
+          tip.style.display='block';
+        }
+        if(linkIcon)linkIcon.setAttribute('opacity','0.7');
+        ng.setAttribute('transform',`translate(${node.x},${node.y}) scale(1.06)`);
+      });
+      ng.addEventListener('mouseleave',()=>{
+        hovered=null;tip.style.display='none';
+        if(linkIcon)linkIcon.setAttribute('opacity','0');
+        ng.setAttribute('transform',`translate(${node.x},${node.y})`);
+      });
+      ng.addEventListener('click',e=>{
+        e.stopPropagation();
+        if(node.childIds.length&&node.depth>0){
+          if(collapsed.has(node.id))collapsed.delete(node.id);else collapsed.add(node.id);
+          render();
+        } else if(src){
+          window.open(src.url,'_blank','noopener');
+        }
+      });
+
+      g.appendChild(ng);
+    });
+  }
+
+  render();
+}
+
+// ═══ DEMO DATA ═══
+
+const grayscaleData = {
+  central: "Macro Case for Crypto",
+  sources: [
+    { label: "Grayscale — Zach Pandl, Sep 2025", url: "https://www.grayscale.com/research/reports/the-macro-case-for-crypto" },
+  ],
+  branches: [
+    { label:"🏦 Fiat Trust System", group:0, sourceId:"s1", children:[
+      {label:"No intrinsic value",sourceId:"s1",detail:"Fiat money works because of institutions, not paper. A system based on trust."},
+      {label:"Credibility anchors supply",sourceId:"s1",detail:"Governments promise to limit supply; the public judges if they mean it."},
+      {label:"Central bank independence",sourceId:"s1",detail:"Independent central banks with inflation targets — the dominant framework since the 1990s."},
+      {label:"EM currencies failing",sourceId:"s1",detail:"10 countries with ~1B people already use crypto as a monetary life raft."},
+    ]},
+    { label:"💰 U.S. Debt Crisis", group:1, sourceId:"s1", children:[
+      {label:"Debt ~100% of GDP",sourceId:"s1",detail:"National debt ~$30T, nearly WWII levels, projected to keep rising sharply."},
+      {label:"6% avg deficit since '08",sourceId:"s1",detail:"Up from just 1% in 2007. Average annual deficit ~6% of GDP since the financial crisis."},
+      {label:"Revenue ≤ mandatory + interest",sourceId:"s1",detail:"Nothing left for discretionary spending. Balancing requires painful cuts or tax hikes."},
+      {label:"Bipartisan & intractable",sourceId:"s1",detail:"Sustained under both parties. The One Big Beautiful Bill Act keeps deficits high for 10+ years."},
+    ]},
+    { label:"📈 Yields & Snowball", group:1, sourceId:"s1", children:[
+      {label:"Rising bond yields",sourceId:"s1",detail:"The multidecade falling-yields trend appears over. Treasury demand at low yields is satiated."},
+      {label:"Foreign demand declining",sourceId:"s1",detail:"EM reserve slowdown, end of Japan deflation, and geopolitical shifts reduce appetite."},
+      {label:"Interest expense surging",sourceId:"s1",detail:"Projected to reach 4–5% of GDP by 2050 as debt refinances at higher rates."},
+      {label:"Debt snowball effect",sourceId:"s1",detail:"If interest rate > nominal GDP growth, debt/GDP rises automatically — even with balanced primary deficit."},
+    ]},
+    { label:"🔮 4 Possible Outcomes", group:2, sourceId:"s1", children:[
+      {label:"Fiscal contraction",sourceId:"s1",detail:"Spending cuts / tax increases. Possible eventually, but Congress just expanded deficits."},
+      {label:"AI-driven growth boom",sourceId:"s1",detail:"High GDP growth could ease debt. Not visible in data yet but an AI productivity surge could help."},
+      {label:"Low rates + inflation",sourceId:"s1",detail:"Grayscale's base case: ~3% rates, ~4% inflation could stabilize debt without cutting deficits."},
+      {label:"Default (very unlikely)",sourceId:"s1",detail:"Debt is USD-denominated — inflation is always less painful than non-payment."},
+    ]},
+    { label:"🛡️ Crypto as Hedge", group:2, sourceId:"s1", children:[
+      {label:"Programmatic supply",sourceId:"s1",detail:"Bitcoin capped at 21M coins. Grows 450 BTC/day, halves every ~4 years. Transparent and immutable."},
+      {label:"No institutional master",sourceId:"s1",detail:"Unlike fiat, supply can't be inflated by a government servicing debts. No one controls it."},
+      {label:"BTC + ETH as store of value",sourceId:"s1",detail:"Viable due to broad adoption, decentralization, and limited supply growth."},
+      {label:"❓ Volatility problem",type:"inquiry",detail:"Report argues crypto = store of value but doesn't address 50–80% historical drawdowns."},
+    ]},
+    { label:"⚠️ What Could Reverse", group:2, sourceId:"s1", children:[
+      {label:"Govt restores credibility",sourceId:"s1",detail:"Stabilize debt/GDP + reinforce inflation targets + buttress central bank independence → crypto demand falls."},
+      {label:"Gold precedent: 1980s–90s",sourceId:"s1",detail:"Gold thrived in 1970s low-credibility era, then declined when the Fed regained control."},
+      {label:"❓ Regulatory risk",type:"inquiry",detail:"Report omits possibility of governments directly restricting crypto adoption."},
+      {label:"❓ CBDC competition",type:"inquiry",detail:"Central bank digital currencies could offer crypto's efficiency under government control."},
+    ]},
+  ],
+};
+
+const deepWorkData = {
+  central: "Deep Work",
+  sources: [
+    { label: "Newport — grahammann.net", url: "https://grahammann.net/book-notes/deep-work-cal-newport" },
+    { label: "Runn.io summary", url: "https://www.runn.io/blog/deep-work-summary" },
+    { label: "Dan Silvestre notes", url: "https://dansilvestre.com/summaries/deep-work-summary/" },
+    { label: "Clockwise guide", url: "https://www.getclockwise.com/blog/deep-work" },
+    { label: "Todoist guide", url: "https://www.todoist.com/inspiration/deep-work" },
+  ],
+  branches: [
+    { label:"🧠 Core Thesis", group:0, sourceId:"s1", children:[
+      {label:"Distraction-free focus",sourceId:"s1",detail:"Professional activity in distraction-free concentration that pushes cognitive limits."},
+      {label:"Creates irreplaceable value",sourceId:"s3",detail:"Deep work produces results that are hard to replicate — the output can't be automated."},
+      {label:"Rare yet vital",sourceId:"s3",detail:"This skill is becoming rarer exactly when it's becoming more valuable in the economy."},
+      {label:"Work = Time × Focus",sourceId:"s3",detail:"High-Quality Work = (Time Spent) × (Intensity of Focus). Newport's core formula."},
+    ]},
+    { label:"⚡ Why It Matters", group:0, sourceId:"s2", children:[
+      {label:"Master hard things fast",sourceId:"s2",detail:"The two core abilities for thriving: learning complex things quickly and producing at elite level."},
+      {label:"Triggers flow state",sourceId:"s1",detail:"Deep work generates Csikszentmihalyi's flow — stretching your mind, losing yourself in activity."},
+      {label:"Automation-proof",detail:"Creative, deeply human work that can't be replaced by algorithms or outsourced."},
+    ]},
+    { label:"🚧 Enemies of Depth", group:1, sourceId:"s4", children:[
+      {label:"Open floor plans",sourceId:"s4",detail:"Meant for collaboration but create continuous distraction. One person disrupts dozens."},
+      {label:"Email & messaging",sourceId:"s2",detail:"Instant messaging was supposed to boost productivity but fragments attention instead."},
+      {label:"Social media",sourceId:"s3",detail:"The 'any-benefit' mindset justifies tools for minor gains while ignoring major attention costs."},
+      {label:"Busyness ≠ productivity",sourceId:"s3",detail:"Without clear indicators, workers default to visible busywork as a productivity proxy."},
+    ]},
+    { label:"📅 4 Scheduling Modes", group:2, sourceId:"s2", children:[
+      {label:"Monastic",sourceId:"s2",detail:"Radically eliminate all shallow obligations. Stephenson doesn't publish his email address."},
+      {label:"Bimodal",sourceId:"s2",detail:"Alternate between defined deep-work retreats and normal periods. Jung's Bollingen approach."},
+      {label:"Rhythmic (best default)",sourceId:"s4",detail:"Daily habit at set times. Don't-break-the-chain method. Most practical for most people."},
+      {label:"Journalistic",detail:"Fit deep work in wherever gaps appear. Requires practiced ability to switch modes rapidly."},
+    ]},
+    { label:"🏋️ Training Attention", group:2, sourceId:"s5", children:[
+      {label:"Embrace boredom",sourceId:"s1",detail:"Seeking stimulation at every idle moment trains your brain against sustained focus."},
+      {label:"Productive meditation",sourceId:"s5",detail:"Focus on one problem during physical activity — walking, jogging, showering. 2–3×/week."},
+      {label:"Craftsman tool selection",sourceId:"s1",detail:"Only adopt tools whose benefits substantially outweigh costs for what matters most."},
+      {label:"❓ Neuroplasticity evidence",type:"inquiry",detail:"Sources say 'rewire your brain' but cite no specific neuroscience studies."},
+    ]},
+    { label:"🎯 4 Disciplines", group:2, sourceId:"s5", children:[
+      {label:"Focus on wildly important",sourceId:"s5",detail:"Identify a small number of ambitious outcomes to pursue during deep work hours."},
+      {label:"Act on lead measures",sourceId:"s5",detail:"Track hours in deep work (lead), not output produced (lag measure)."},
+      {label:"Keep a scoreboard",sourceId:"s3",detail:"Physical tally of deep work hours per week. Physical boards beat digital trackers."},
+      {label:"Weekly accountability",detail:"Weekly review: celebrate wins, diagnose bad weeks, plan ahead."},
+    ]},
+  ],
+};
+
+// Initialize demos
+createDemo('demo1', grayscaleData, 'Bauhaus');
+createDemo('demo2', deepWorkData, 'Ocean Sunset');
+
+// Scroll reveal
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
