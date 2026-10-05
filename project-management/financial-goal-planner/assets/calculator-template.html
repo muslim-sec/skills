@@ -1,0 +1,654 @@
+<!--
+  ============================================================================
+  Financial Goal Planner — Calculator Template
+  ============================================================================
+  USAGE: This is a starting template. Adapt it to the user's specific goal:
+    - Change the title and goal type
+    - Adjust hidden cost categories per goal type (see references/hidden-costs.md)
+    - Pre-fill any known values (product name, price, currency from search)
+    - Translate UI to user's accent if needed (default: لهجة بيضاء عربية)
+    - Add/remove option cards based on whether goal is comparison-friendly
+    - Update the storage key per session so multiple plans don't collide
+
+  KEY FEATURES:
+    - localStorage auto-save (key: 'fgp:plan:<slug>')
+    - RTL Arabic by default
+    - Mobile responsive (works on 320px+)
+    - Multiple option cards for comparison
+    - Real-time recalculation on every input change
+    - Export plan as JSON or copy summary text
+    - No external dependencies (Chart.js loaded only if needed)
+  ============================================================================
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>مخطط الهدف المالي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --ink: #1a1d21;
+    --ink-soft: #5b6470;
+    --line: #e6e9ee;
+    --brand: #4f46e5;
+    --brand-soft: #eef0ff;
+    --good: #16a34a;
+    --good-soft: #dcfce7;
+    --warn: #d97706;
+    --warn-soft: #fef3c7;
+    --danger: #dc2626;
+    --danger-soft: #fee2e2;
+    --muted: #f1f3f7;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  body { padding: 16px; max-width: 1100px; margin: 0 auto; line-height: 1.55; }
+
+  header.hero {
+    background: linear-gradient(135deg, var(--brand) 0%, #7c3aed 100%);
+    color: white; border-radius: var(--radius); padding: 22px 24px;
+    margin-bottom: 18px; box-shadow: var(--shadow);
+  }
+  header.hero h1 { margin: 0 0 6px; font-size: 22px; font-weight: 800; }
+  header.hero p { margin: 0; opacity: .92; font-size: 14px; }
+  header.hero .goal-input {
+    margin-top: 14px; width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 0; background: rgba(255,255,255,.16); color: white; font-size: 15px;
+    font-family: inherit;
+  }
+  header.hero .goal-input::placeholder { color: rgba(255,255,255,.7); }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .grid-2 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow);
+  }
+  .card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .card .sub { color: var(--ink-soft); font-size: 12.5px; margin-bottom: 14px; }
+  .card .icon { width: 28px; height: 28px; border-radius: 8px; background: var(--brand-soft); color: var(--brand); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+
+  label.field { display: block; margin-bottom: 10px; }
+  label.field span { display: block; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  label.field input, label.field select {
+    width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--line);
+    background: white; font-size: 14px; font-family: inherit; color: var(--ink);
+  }
+  label.field input:focus, label.field select:focus { outline: 2px solid var(--brand); outline-offset: -1px; border-color: var(--brand); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 520px) { .row-3 { grid-template-columns: 1fr 1fr; } }
+
+  /* Options (comparison) */
+  #options-list { display: flex; flex-direction: column; gap: 12px; }
+  .option {
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 14px;
+    background: #fafbfc; position: relative;
+  }
+  .option .option-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .option .option-name { flex: 1; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-weight: 700; background: white; font-family: inherit; }
+  .option .option-remove {
+    background: var(--danger-soft); color: var(--danger); border: 0; padding: 6px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .option-results {
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line);
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    font-size: 13px;
+  }
+  .option-results .stat { background: white; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); }
+  .option-results .stat .lbl { color: var(--ink-soft); font-size: 11px; }
+  .option-results .stat .val { font-weight: 800; font-size: 14px; }
+  .option-results .stat.highlight { background: var(--brand-soft); border-color: transparent; }
+  .option-results .stat.highlight .val { color: var(--brand); }
+
+  .add-btn {
+    background: var(--brand-soft); color: var(--brand); border: 1px dashed var(--brand);
+    border-radius: 10px; padding: 10px; width: 100%; font-weight: 700; cursor: pointer;
+    font-size: 13px; font-family: inherit; margin-top: 10px;
+  }
+  .add-btn:hover { background: #dde0ff; }
+
+  /* Results */
+  .result-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 600px) { .result-grid { grid-template-columns: repeat(4, 1fr); } }
+  .result {
+    background: var(--muted); padding: 12px; border-radius: 11px; text-align: center;
+  }
+  .result .label { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .result .value { font-size: 18px; font-weight: 800; color: var(--ink); }
+  .result.brand { background: var(--brand-soft); color: var(--brand); }
+  .result.brand .label { color: var(--brand); }
+  .result.brand .value { color: var(--brand); }
+
+  /* Risk badge */
+  .risk-bar { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 11px; margin-top: 6px; }
+  .risk-bar.safe { background: var(--good-soft); color: #15803d; }
+  .risk-bar.medium { background: var(--warn-soft); color: #b45309; }
+  .risk-bar.high { background: var(--danger-soft); color: var(--danger); }
+  .risk-bar .badge { font-size: 22px; }
+  .risk-bar .text { flex: 1; font-size: 13.5px; font-weight: 600; }
+
+  /* Recommendations */
+  .recs { list-style: none; padding: 0; margin: 0; }
+  .recs li {
+    padding: 10px 12px; background: var(--muted); border-radius: 9px; margin-bottom: 8px;
+    font-size: 13.5px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .recs li::before { content: "💡"; flex-shrink: 0; }
+
+  /* Actions */
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .btn {
+    padding: 10px 16px; border-radius: 10px; border: 0; cursor: pointer;
+    font-weight: 700; font-family: inherit; font-size: 13.5px;
+  }
+  .btn.primary { background: var(--brand); color: white; }
+  .btn.ghost { background: var(--muted); color: var(--ink); }
+  .btn.danger { background: var(--danger-soft); color: var(--danger); }
+
+  footer.note {
+    margin-top: 20px; text-align: center; font-size: 12px; color: var(--ink-soft);
+    padding: 14px;
+  }
+  footer.note a { color: var(--brand); text-decoration: none; }
+
+  .hidden { display: none !important; }
+
+  /* English (LTR) override */
+  html[dir="ltr"] body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #1a1d21; color: white; padding: 10px 18px; border-radius: 10px;
+    font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1 id="hero-title">🎯 مخطط الهدف المالي</h1>
+  <p id="hero-sub">عدّل الأرقام وشوف خطتك تتغير لحظيًا. كل شيء يُحفظ تلقائيًا في متصفحك.</p>
+  <input id="goal-name" class="goal-input" type="text" placeholder="إيش هدفك؟ (مثلاً: شراء سيارة عائلية، شقة بالقاهرة الجديدة، توفير لزواج…)" />
+</header>
+
+<div class="grid">
+
+  <!-- Control Dashboard -->
+  <section class="card">
+    <h2><span class="icon">💼</span> وضعك المالي الحالي</h2>
+    <div class="sub">عدّل الأرقام لتعكس وضعك الحقيقي. كلها تقديرية وأنت تتحكم.</div>
+    <div class="row">
+      <label class="field">
+        <span>العملة</span>
+        <select id="currency">
+          <option value="SAR">ريال سعودي (ر.س)</option>
+          <option value="AED">درهم إماراتي (د.إ)</option>
+          <option value="EGP">جنيه مصري (ج.م)</option>
+          <option value="KWD">دينار كويتي (د.ك)</option>
+          <option value="QAR">ريال قطري (ر.ق)</option>
+          <option value="BHD">دينار بحريني (د.ب)</option>
+          <option value="OMR">ريال عماني (ر.ع)</option>
+          <option value="JOD">دينار أردني (د.أ)</option>
+          <option value="USD">دولار أمريكي ($)</option>
+          <option value="EUR">يورو (€)</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>الدخل الشهري الصافي</span>
+        <input type="number" id="income" min="0" step="100" placeholder="مثال: 15000" />
+      </label>
+    </div>
+    <div class="row">
+      <label class="field">
+        <span>المدخرات الحالية</span>
+        <input type="number" id="savings" min="0" step="500" placeholder="كم لديك الآن" />
+      </label>
+      <label class="field">
+        <span>المصاريف الشهرية الثابتة</span>
+        <input type="number" id="expenses" min="0" step="100" placeholder="إيجار + طعام + خدمات…" />
+      </label>
+    </div>
+    <div class="row">
+      <label class="field">
+        <span>نسبة الادخار المستهدفة من الفائض %</span>
+        <input type="number" id="save-rate" min="0" max="100" step="5" value="60" />
+      </label>
+      <label class="field">
+        <span>الإطار الزمني المرغوب (بالشهور)</span>
+        <input type="number" id="timeframe" min="1" step="1" placeholder="مثال: 24" />
+      </label>
+    </div>
+  </section>
+
+  <!-- Options for comparison -->
+  <section class="card">
+    <h2><span class="icon">🛒</span> الهدف / الخيارات</h2>
+    <div class="sub">أضف خيار أو أكثر للمقارنة (سيارة، عقار، منتج، أو هدف ادخار). عدّل الأرقام والتمويل لكل خيار.</div>
+    <div id="options-list"></div>
+    <button class="add-btn" id="add-option">+ إضافة خيار جديد للمقارنة</button>
+  </section>
+
+  <!-- Hidden costs -->
+  <section class="card">
+    <h2><span class="icon">⚠️</span> تكاليف خفية / متكررة</h2>
+    <div class="sub">بنود غالبًا تُنسى. عدّلها لكل خيار حسب نوعه (سيارة = تأمين/صيانة/إهلاك، عقار = صيانة/رسوم…).</div>
+    <div class="row-3">
+      <label class="field">
+        <span>تكلفة شراء واحدة (نقل ملكية، رسوم…) %</span>
+        <input type="number" id="onetime-pct" min="0" max="20" step="0.5" value="2" />
+      </label>
+      <label class="field">
+        <span>تكلفة سنوية متكررة (تأمين، صيانة…) %</span>
+        <input type="number" id="yearly-pct" min="0" max="30" step="0.5" value="6" />
+      </label>
+      <label class="field">
+        <span>إهلاك سنوي % (للسيارات أساسًا)</span>
+        <input type="number" id="depreciation-pct" min="0" max="30" step="1" value="0" />
+      </label>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="card">
+    <h2><span class="icon">📊</span> النتائج</h2>
+    <div class="sub">ملخص خطتك وكم تحتاج توفر شهريًا.</div>
+    <div class="result-grid">
+      <div class="result"><div class="label">الفائض الشهري المتاح</div><div class="value" id="r-surplus">—</div></div>
+      <div class="result"><div class="label">الادخار الشهري الفعلي</div><div class="value" id="r-monthly-save">—</div></div>
+      <div class="result brand"><div class="label">الشهور لتحقيق الهدف</div><div class="value" id="r-months">—</div></div>
+      <div class="result"><div class="label">التاريخ المتوقع</div><div class="value" id="r-date">—</div></div>
+    </div>
+
+    <h2 style="margin-top:18px"><span class="icon">⚖️</span> مؤشر الخطر</h2>
+    <div id="risk" class="risk-bar safe">
+      <div class="badge">✅</div>
+      <div class="text">أضف بياناتك أعلاه لتقييم الخطر.</div>
+    </div>
+
+    <h2 style="margin-top:18px"><span class="icon">💡</span> توصيات</h2>
+    <ul class="recs" id="recs">
+      <li>أضف بيانات الدخل والهدف لتظهر التوصيات.</li>
+    </ul>
+
+    <div class="actions">
+      <button class="btn primary" id="export-json">📥 تصدير الخطة (JSON)</button>
+      <button class="btn ghost" id="copy-summary">📋 نسخ ملخص نصي</button>
+      <button class="btn ghost" id="screenshot-hint">📸 تذكير بأخذ Screenshot</button>
+      <button class="btn danger" id="reset">🗑️ إعادة تعيين</button>
+    </div>
+  </section>
+
+</div>
+
+<footer class="note">
+  هذي أداة تخطيط، ليست نصيحة مالية ملزمة. الأرقام تقريبية وعليك التحقق من الأسعار الفعلية قبل أي قرار شراء أو تمويل.
+  <br>
+  مهارة بناها <a href="https://hossamudin.com/" target="_blank" rel="noopener">حسام الدين حسن (@epreneurs)</a>
+</footer>
+
+<div id="toast">تم</div>
+
+<script>
+  // ====== STATE ======
+  const STORAGE_KEY = 'fgp:plan:default'; // change per goal if needed
+  const DEFAULT_OPTION = () => ({
+    id: Date.now() + Math.random().toString(36).slice(2,7),
+    name: 'الخيار الجديد',
+    price: '',
+    downpayment: '',
+    financing: 'cash', // cash | installment | murabaha | conventional
+    rate: 6,
+    years: 5,
+  });
+
+  let state = loadState() || {
+    goal: '',
+    currency: 'SAR',
+    income: '',
+    savings: '',
+    expenses: '',
+    saveRate: 60,
+    timeframe: '',
+    onetimePct: 2,
+    yearlyPct: 6,
+    depreciationPct: 0,
+    options: [DEFAULT_OPTION()],
+  };
+
+  // ====== STORAGE ======
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+  }
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  // ====== HELPERS ======
+  const CURRENCY_SYMBOLS = {
+    SAR: 'ر.س', AED: 'د.إ', EGP: 'ج.م', KWD: 'د.ك', QAR: 'ر.ق',
+    BHD: 'د.ب', OMR: 'ر.ع', JOD: 'د.أ', USD: '$', EUR: '€'
+  };
+  function fmt(n) {
+    if (!isFinite(n) || n === null || n === undefined || n === '') return '—';
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(n)) + ' ' + (CURRENCY_SYMBOLS[state.currency] || '');
+  }
+  function num(v) { const x = Number(v); return isFinite(x) ? x : 0; }
+
+  // ====== FINANCING CALC ======
+  // Returns { monthly, total, totalCost (price+interest), interest }
+  function calcFinancing(opt) {
+    const price = num(opt.price);
+    const down = num(opt.downpayment);
+    const principal = Math.max(0, price - down);
+    const years = Math.max(1, num(opt.years) || 1);
+    const months = years * 12;
+    const rate = num(opt.rate) / 100;
+
+    if (opt.financing === 'cash') {
+      return { monthly: 0, totalFinanced: price, profit: 0, totalCost: price };
+    }
+    if (opt.financing === 'installment') {
+      // Direct from seller — usually no published interest, simple division
+      const monthly = months > 0 ? principal / months : 0;
+      return { monthly, totalFinanced: price, profit: 0, totalCost: price };
+    }
+    if (opt.financing === 'murabaha') {
+      // Flat-rate Islamic murabaha (common simplified form)
+      const profit = principal * rate * years;
+      const totalFinanced = principal + profit;
+      const monthly = months > 0 ? totalFinanced / months : 0;
+      return { monthly, totalFinanced: totalFinanced + down, profit, totalCost: price + profit };
+    }
+    if (opt.financing === 'conventional') {
+      // Annuity formula on declining balance
+      const r = rate / 12;
+      let monthly;
+      if (r === 0) monthly = principal / months;
+      else monthly = principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+      const total = monthly * months;
+      const profit = total - principal;
+      return { monthly, totalFinanced: total + down, profit, totalCost: price + profit };
+    }
+    return { monthly: 0, totalFinanced: price, profit: 0, totalCost: price };
+  }
+
+  // ====== HIDDEN COSTS ======
+  function calcHiddenCosts(opt) {
+    const price = num(opt.price);
+    const onetime = price * (num(state.onetimePct) / 100);
+    const yearlyRecurring = price * (num(state.yearlyPct) / 100);
+    const yearlyDepreciation = price * (num(state.depreciationPct) / 100);
+    const fiveYearTotal = onetime + (yearlyRecurring + yearlyDepreciation) * 5;
+    return { onetime, yearlyRecurring, yearlyDepreciation, fiveYearTotal };
+  }
+
+  // ====== RENDER OPTIONS ======
+  function renderOptions() {
+    const container = document.getElementById('options-list');
+    container.innerHTML = '';
+    state.options.forEach((opt) => {
+      const card = document.createElement('div');
+      card.className = 'option';
+      const fin = calcFinancing(opt);
+      const hidden = calcHiddenCosts(opt);
+      const trueCostMonthly = fin.monthly + (hidden.yearlyRecurring + hidden.yearlyDepreciation) / 12;
+      const trueTotal = fin.totalCost + hidden.onetime + (hidden.yearlyRecurring + hidden.yearlyDepreciation) * 5;
+
+      card.innerHTML = `
+        <div class="option-head">
+          <input class="option-name" data-id="${opt.id}" data-field="name" value="${escapeHtml(opt.name)}" placeholder="اسم الخيار" />
+          <button class="option-remove" data-remove="${opt.id}">حذف</button>
+        </div>
+        <div class="row">
+          <label class="field">
+            <span>السعر الإجمالي</span>
+            <input type="number" min="0" step="500" data-id="${opt.id}" data-field="price" value="${opt.price}" placeholder="مثال: 100000" />
+          </label>
+          <label class="field">
+            <span>الدفعة المقدمة</span>
+            <input type="number" min="0" step="500" data-id="${opt.id}" data-field="downpayment" value="${opt.downpayment}" placeholder="مثال: 20000" />
+          </label>
+        </div>
+        <div class="row-3">
+          <label class="field">
+            <span>طريقة التمويل</span>
+            <select data-id="${opt.id}" data-field="financing">
+              <option value="cash" ${opt.financing==='cash'?'selected':''}>كاش</option>
+              <option value="installment" ${opt.financing==='installment'?'selected':''}>تقسيط من البائع</option>
+              <option value="murabaha" ${opt.financing==='murabaha'?'selected':''}>مرابحة إسلامية</option>
+              <option value="conventional" ${opt.financing==='conventional'?'selected':''}>تمويل تقليدي بفائدة</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>المعدل السنوي %</span>
+            <input type="number" min="0" max="50" step="0.25" data-id="${opt.id}" data-field="rate" value="${opt.rate}" />
+          </label>
+          <label class="field">
+            <span>المدة (سنوات)</span>
+            <input type="number" min="1" max="40" step="1" data-id="${opt.id}" data-field="years" value="${opt.years}" />
+          </label>
+        </div>
+        <div class="option-results">
+          <div class="stat highlight">
+            <div class="lbl">قسط شهري (تمويل)</div>
+            <div class="val">${fmt(fin.monthly)}</div>
+          </div>
+          <div class="stat">
+            <div class="lbl">إجمالي التكلفة (مع التمويل)</div>
+            <div class="val">${fmt(fin.totalCost)}</div>
+          </div>
+          <div class="stat">
+            <div class="lbl">تكلفة شهرية حقيقية (مع الخفية)</div>
+            <div class="val">${fmt(trueCostMonthly)}</div>
+          </div>
+          <div class="stat">
+            <div class="lbl">تكلفة 5 سنين شاملة</div>
+            <div class="val">${fmt(trueTotal)}</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    // Bind events
+    container.querySelectorAll('input[data-id], select[data-id]').forEach(el => {
+      el.addEventListener('input', e => {
+        const id = e.target.dataset.id;
+        const field = e.target.dataset.field;
+        const opt = state.options.find(o => o.id === id);
+        if (!opt) return;
+        opt[field] = e.target.value;
+        saveState();
+        renderOptions();
+        renderResults();
+      });
+    });
+    container.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const id = e.target.dataset.remove;
+        if (state.options.length === 1) { toast('لا يمكن حذف آخر خيار'); return; }
+        state.options = state.options.filter(o => o.id !== id);
+        saveState();
+        renderOptions();
+        renderResults();
+      });
+    });
+  }
+
+  // ====== RENDER RESULTS ======
+  function renderResults() {
+    const income = num(state.income);
+    const expenses = num(state.expenses);
+    const savings = num(state.savings);
+    const surplus = Math.max(0, income - expenses);
+    const monthlySave = surplus * (num(state.saveRate) / 100);
+
+    // Pick the cheapest option (by upfront need = price)
+    const primaryOpt = state.options[0] || DEFAULT_OPTION();
+    const primaryFin = calcFinancing(primaryOpt);
+    const primaryHidden = calcHiddenCosts(primaryOpt);
+
+    // For cash/installment: need full price (or just downpayment if financing)
+    // For financing: need downpayment, then can carry monthly cost
+    const needed = primaryOpt.financing === 'cash'
+      ? num(primaryOpt.price) - savings
+      : num(primaryOpt.downpayment) - savings;
+
+    const months = monthlySave > 0 && needed > 0 ? Math.ceil(needed / monthlySave) : (needed <= 0 ? 0 : Infinity);
+    const targetDate = isFinite(months) && months >= 0
+      ? new Date(Date.now() + months * 30.44 * 86400000).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' })
+      : '—';
+
+    document.getElementById('r-surplus').textContent = income > 0 ? fmt(surplus) : '—';
+    document.getElementById('r-monthly-save').textContent = monthlySave > 0 ? fmt(monthlySave) : '—';
+    document.getElementById('r-months').textContent = isFinite(months) && needed > 0 ? months + ' شهر' : (needed <= 0 && income > 0 ? 'جاهز الآن! ✓' : '—');
+    document.getElementById('r-date').textContent = targetDate;
+
+    // Risk
+    const riskEl = document.getElementById('risk');
+    const monthlyBurden = primaryFin.monthly + (primaryHidden.yearlyRecurring + primaryHidden.yearlyDepreciation) / 12;
+    const burdenPct = income > 0 ? (monthlyBurden / income) * 100 : 0;
+    let riskClass = 'safe', riskBadge = '✅', riskText = 'نسبة الالتزام الشهري معقولة وضمن الحد الآمن.';
+    if (income === 0) { riskText = 'أضف الدخل لتقييم الخطر.'; }
+    else if (burdenPct > 50) { riskClass = 'high'; riskBadge = '🚨'; riskText = `الالتزام الشهري ${burdenPct.toFixed(0)}% من دخلك — خطر عالي. فكر في تطويل المدة أو خيار أرخص.`; }
+    else if (burdenPct > 33) { riskClass = 'medium'; riskBadge = '⚠️'; riskText = `الالتزام الشهري ${burdenPct.toFixed(0)}% من دخلك — متوسط الخطر. حاول لا تتجاوز 33%.`; }
+    else if (burdenPct > 0) { riskText = `الالتزام الشهري ${burdenPct.toFixed(0)}% من دخلك — آمن (أقل من 33%).`; }
+    riskEl.className = 'risk-bar ' + riskClass;
+    riskEl.querySelector('.badge').textContent = riskBadge;
+    riskEl.querySelector('.text').textContent = riskText;
+
+    // Recommendations
+    const recs = [];
+    if (income > 0 && expenses > 0 && surplus / income < 0.2) {
+      recs.push(`فائضك الشهري قليل (${((surplus/income)*100).toFixed(0)}% من دخلك). فكّر في تقليل المصاريف أو زيادة الدخل قبل الالتزام بقسط جديد.`);
+    }
+    if (primaryOpt.financing === 'conventional' && (primaryOpt.financing !== 'cash')) {
+      recs.push('لو تبحث عن خيار حلال شرعًا، جرّب المرابحة الإسلامية أو التقسيط من البائع — قارن الأرقام في الجدول.');
+    }
+    if (state.options.length >= 2) {
+      const cheapest = state.options.reduce((a,b) => calcFinancing(a).totalCost < calcFinancing(b).totalCost ? a : b);
+      const dearest = state.options.reduce((a,b) => calcFinancing(a).totalCost > calcFinancing(b).totalCost ? a : b);
+      const diff = calcFinancing(dearest).totalCost - calcFinancing(cheapest).totalCost;
+      if (diff > 0) {
+        recs.push(`"${cheapest.name}" أوفر من "${dearest.name}" بـ ${fmt(diff)} على إجمالي التكلفة.`);
+      }
+    }
+    if (num(primaryOpt.price) > 0 && num(primaryOpt.downpayment) / num(primaryOpt.price) < 0.2 && primaryOpt.financing !== 'cash' && primaryOpt.financing !== 'installment') {
+      recs.push('زيادة الدفعة المقدمة لـ 20%+ تقلل التكلفة الإجمالية للتمويل بشكل ملحوظ.');
+    }
+    if (state.depreciationPct > 0 && primaryOpt.financing !== 'cash') {
+      recs.push('انتبه: مع الإهلاك السنوي، قد تجد قيمة الأصل أقل من رصيد القرض في أول سنوات التمويل (خطر "negative equity").');
+    }
+    if (savings > 0 && num(primaryOpt.price) > 0 && savings >= num(primaryOpt.price) * 0.5) {
+      recs.push('لديك مدخرات تغطي 50%+ من السعر — فكّر في الكاش أو دفعة كبيرة لتقليل تكلفة التمويل.');
+    }
+    if (recs.length === 0) {
+      recs.push('أضف بياناتك (الدخل، الخيارات، التكاليف) لتظهر توصيات مخصصة لحالتك.');
+    }
+    document.getElementById('recs').innerHTML = recs.map(r => `<li>${escapeHtml(r)}</li>`).join('');
+  }
+
+  // ====== EVENTS ======
+  function bindControls() {
+    const fields = ['goal-name','currency','income','savings','expenses','save-rate','timeframe','onetime-pct','yearly-pct','depreciation-pct'];
+    const map = { 'goal-name':'goal', 'currency':'currency', 'income':'income', 'savings':'savings', 'expenses':'expenses', 'save-rate':'saveRate', 'timeframe':'timeframe', 'onetime-pct':'onetimePct', 'yearly-pct':'yearlyPct', 'depreciation-pct':'depreciationPct' };
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = state[map[id]] ?? el.value;
+      el.addEventListener('input', () => {
+        state[map[id]] = el.value;
+        saveState();
+        renderOptions();
+        renderResults();
+      });
+    });
+
+    document.getElementById('add-option').addEventListener('click', () => {
+      state.options.push(DEFAULT_OPTION());
+      saveState();
+      renderOptions();
+      renderResults();
+    });
+
+    document.getElementById('export-json').addEventListener('click', () => {
+      const data = JSON.stringify(state, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'financial-plan.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('تم تنزيل ملف الخطة');
+    });
+
+    document.getElementById('copy-summary').addEventListener('click', () => {
+      const txt = buildSummaryText();
+      navigator.clipboard?.writeText(txt).then(() => toast('تم نسخ الملخص'));
+    });
+
+    document.getElementById('screenshot-hint').addEventListener('click', () => {
+      toast('استخدم Cmd+Shift+4 (ماك) أو Win+Shift+S (ويندوز) لأخذ Screenshot');
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+      if (!confirm('متأكد تبغى تمسح كل البيانات؟')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    });
+  }
+
+  function buildSummaryText() {
+    const lines = [];
+    lines.push('📋 خطة مالية — ' + (state.goal || 'بدون اسم'));
+    lines.push('العملة: ' + state.currency);
+    lines.push('الدخل الشهري: ' + fmt(num(state.income)));
+    lines.push('المدخرات الحالية: ' + fmt(num(state.savings)));
+    lines.push('المصاريف الشهرية: ' + fmt(num(state.expenses)));
+    lines.push('');
+    state.options.forEach((opt, i) => {
+      const fin = calcFinancing(opt);
+      lines.push(`خيار ${i+1}: ${opt.name}`);
+      lines.push(`  السعر: ${fmt(num(opt.price))} | دفعة مقدمة: ${fmt(num(opt.downpayment))}`);
+      lines.push(`  تمويل: ${opt.financing} | مدة: ${opt.years} سنوات | معدل: ${opt.rate}%`);
+      lines.push(`  قسط شهري: ${fmt(fin.monthly)} | إجمالي التكلفة: ${fmt(fin.totalCost)}`);
+      lines.push('');
+    });
+    lines.push('⚠️ هذي أداة تخطيط، ليست نصيحة مالية ملزمة.');
+    return lines.join('\n');
+  }
+
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // ====== INIT ======
+  bindControls();
+  renderOptions();
+  renderResults();
+</script>
+
+</body>
+</html>
