@@ -1,0 +1,105 @@
+{
+  "skill_name": "arabic-interview-coach",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "عندي مقابلة الأسبوع القادم لوظيفة مطور backend في شركة تقنية ناشئة. أنا شغال على Python وDjango من 3 سنين. ساعدني أتمرن",
+      "expected_output": "The skill greets the user in Arabic, asks for more details about the job and their CV/profile, then runs a structured interview covering soft skills, technical Python/Django questions, and a practical coding challenge. Ends with a detailed Arabic dashboard with CV score, interview performance ratings, verdict, and actionable tips.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "responds_in_arabic",
+          "description": "The response is primarily in Arabic"
+        },
+        {
+          "name": "asks_for_cv_or_profile",
+          "description": "Asks for CV, LinkedIn, or profile information before starting the interview"
+        },
+        {
+          "name": "asks_one_question_at_a_time",
+          "description": "During the interview phase, asks only one question per turn"
+        },
+        {
+          "name": "includes_technical_coding_question",
+          "description": "Includes at least one practical coding/technical question relevant to Python or Django"
+        },
+        {
+          "name": "produces_dashboard_with_verdict",
+          "description": "Produces a final dashboard with a clear verdict (مقبول / مقبول بشروط / بحاجة لتطوير) and scores"
+        },
+        {
+          "name": "includes_cv_matching_score",
+          "description": "The dashboard includes a CV/profile matching percentage score"
+        },
+        {
+          "name": "includes_actionable_tips",
+          "description": "Provides at least 5 specific, actionable improvement tips at the end"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I have a job interview for a Digital Marketing Manager role at a Saudi e-commerce company next Thursday. My background: 5 years in social media marketing, worked with brands like Noon and Jarir. Can you do a mock interview with me? I prefer English.",
+      "expected_output": "Skill switches to English since user requested it, asks for CV/profile link, then conducts a structured interview with soft skill questions, marketing strategy questions, and practical scenario-based questions (e.g., designing a campaign, handling a PR crisis). Ends with a full English dashboard with CV score, interview ratings, verdict, and specific tips.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "switches_to_english",
+          "description": "Detects user preference and responds entirely in English"
+        },
+        {
+          "name": "asks_for_profile_info",
+          "description": "Requests CV, portfolio, or LinkedIn before starting"
+        },
+        {
+          "name": "includes_marketing_practical_question",
+          "description": "Asks at least one practical marketing scenario question (campaign design, budget allocation, crisis management, etc.)"
+        },
+        {
+          "name": "maintains_neutral_tone_during_interview",
+          "description": "Does not give positive or negative feedback after each answer during the interview phase"
+        },
+        {
+          "name": "produces_dashboard_with_verdict",
+          "description": "Produces a comprehensive dashboard with verdict, scores per category, and CV matching score"
+        },
+        {
+          "name": "tips_are_role_specific",
+          "description": "The improvement tips are specific to digital marketing, not generic career advice"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "أبغى أتمرن على مقابلة وظيفة محلل بيانات في بنك. عندي بكالوريوس إحصاء وشهادة في Python for Data Science من Coursera. ما عندي خبرة عملية كثير — سنة بس internship. ساعدني",
+      "expected_output": "Acknowledges the junior profile, asks for more details, runs a structured interview adapted to entry-level expectations but still covering soft skills, data analysis concepts, and a practical data scenario question. Honest CV feedback noting the gap between the degree and job requirements, a fair matching score, constructive verdict, and detailed tips specifically tailored to a fresh graduate entering data roles in a bank.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "responds_in_arabic",
+          "description": "Responds in Arabic throughout"
+        },
+        {
+          "name": "adapts_to_junior_level",
+          "description": "Adjusts question difficulty and expectations for an entry-level/internship-level candidate"
+        },
+        {
+          "name": "includes_data_practical_question",
+          "description": "Asks at least one practical data analysis scenario (data cleaning, model selection, result interpretation, etc.)"
+        },
+        {
+          "name": "honest_about_experience_gap",
+          "description": "Honestly addresses the limited experience in the CV feedback and matching score"
+        },
+        {
+          "name": "produces_dashboard_with_verdict",
+          "description": "Ends with a full dashboard including verdict, per-category scores, matching percentage, and tips"
+        },
+        {
+          "name": "tips_include_learning_resources",
+          "description": "Tips include at least one specific learning resource (course, book, certification) relevant to data analyst roles in banking"
+        }
+      ]
+    }
+  ]
+}

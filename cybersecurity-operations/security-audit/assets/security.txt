@@ -1,0 +1,6 @@
+# Place at public/.well-known/security.txt (RFC 9116). Contact and Expires are required.
+Contact: mailto:security@example.com
+Expires: 2027-09-19T00:00:00.000Z
+Preferred-Languages: en, ar
+Canonical: https://www.example.com/.well-known/security.txt
+Policy: https://www.example.com/security-policy
