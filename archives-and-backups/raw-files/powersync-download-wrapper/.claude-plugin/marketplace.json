@@ -1,0 +1,39 @@
+{
+  "name": "powersync",
+  "owner": {
+    "name": "PowerSync",
+    "url": "https://powersync.com",
+    "email": "support@powersync.com"
+  },
+  "metadata": {
+    "description": "Add PowerSync Skills to your Claude Code agent",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "powersync-skills",
+      "description": "Agent skills that help developers build applications with PowerSync",
+      "source": "./",
+      "skills": ["./skills/powersync"],
+      "version": "1.0.0",
+      "author": {
+        "name": "PowerSync"
+      },
+      "keywords": [
+        "powersync",
+        "offline-first",
+        "local-first",
+        "sync",
+        "sqlite",
+        "react-native",
+        "flutter",
+        "kotlin",
+        "swift",
+        "dotnet",
+        "typescript"
+      ],
+      "category": "coding",
+      "license": "MIT"
+    }
+  ]
+}

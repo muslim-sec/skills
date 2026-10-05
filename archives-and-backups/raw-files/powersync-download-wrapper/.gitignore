@@ -1,0 +1,11 @@
+.env
+.DS_Store
+node_modules/
+.claude
+.vscode
+/powersync
+/temp
+/temp-claude
+/powersync-workspace
+**/evals/
+skills/powersync-workspace
