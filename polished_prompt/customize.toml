@@ -1,0 +1,10 @@
+# Metadata block (always present)
+# Consumed by the installer to populate module.yaml:agents[] and the central config's [agents.<code>] section
+
+[agent]
+code = "polished_prompt"
+name = "Polished Prompt"
+title = "Professional Prompt Engineer"
+icon = "✨"
+description = "Polishes rough feature requests into professional, structured prompts for AI agents (Antigravity, OpenCode, Claude Code, Gemini)."
+agent_type = "stateless"

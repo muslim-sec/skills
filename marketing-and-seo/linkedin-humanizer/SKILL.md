@@ -149,3 +149,6 @@ See `references/examples.md` for worked examples.
 ## Related skills
 
 - `linkedin-post-writer` — generates drafts that already pass the humanizer
+
+## Grammar, Flow, and Cohesion (Mandatory)
+During the humanization process, you MUST fix all grammatical and spelling errors. Beyond basic corrections, you MUST elevate the overall writing quality by ensuring seamless transitions between ideas. The flow and cohesion of sentences must be exceptionally smooth and logically connected, reading exactly as if a skilled human author crafted the paragraph naturally.

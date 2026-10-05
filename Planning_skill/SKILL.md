@@ -1,7 +1,7 @@
 ---
 name: Planning_skill
 description: >
-  Enforces a structured, detailed planning workflow for any coding task.
+  ⭐ Enforces a structured, detailed planning workflow for any coding task.
   Ensures every plan clearly defines its purpose (bug fix, new feature, feature extension),
   resolves all file paths during planning, describes changes in detail, includes a verification
   strategy, and produces a ready-to-execute task list. Activate this skill whenever you are
@@ -474,3 +474,6 @@ How do we know the task is truly finished successfully? It is not enough that "t
 **5. Session Management for Massive Tasks**
 AI agents have a limited memory capacity (Context Window). If a plan is massive, the AI will forget instructions halfway through and hallucinate bad code.
 * **Solution:** The AI MUST be forced to break large projects down into small, isolated "Milestones." Each milestone must be executed independently in separate sessions to preserve the AI's focus and memory limits.
+
+## Plan File Storage & Location (Mandatory)
+The final plan MUST be written and saved as a physical Markdown (`.md`) file. This file MUST be placed inside a dedicated `plans/` directory located at the root of the project. If the `plans/` directory does not currently exist in the project root, you MUST explicitly create it before saving the plan file.
